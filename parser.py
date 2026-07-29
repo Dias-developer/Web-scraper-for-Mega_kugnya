@@ -32,12 +32,28 @@ def parsing_catalog(url):
 
     soup = BeautifulSoup(response.text, 'lxml')
 
-    catalogs_soup = soup.find_all('div', class_='col-xxl-4 col-lg-3 col-md-4 col-sm-6 col-xs-6 custom_category_grid')
-    catalogs = []
+    catalog_soup = soup.find_all('div', class_='col-xxl-4 col-lg-3 col-md-4 col-sm-6 col-xs-6 custom_category_grid')
+    subcategories = []
 
-    for catalog in catalogs_soup:
+    for catalog in catalog_soup:
         catalog_url = catalog.find('a').get('href')
-        catalogs.append(catalog_url)
+        subcategories.append(catalog_url)
 
-    for catalog in catalogs:
-        print(catalog)
+    return subcategories
+
+def parsing_subcategories(subcategories_urls):
+    session = make_session()
+    products_url = []
+    for subcategory_url in subcategories_urls:
+        response = session.get(subcategory_url, timeout=(3.05, 27))
+        subcategory_soup = BeautifulSoup(response.text, 'lxml')
+
+        products_url_soup = subcategory_soup.select("a.title")
+        for product in products_url_soup:
+            product_url = product.get('href')
+            products_url.append(product_url)
+
+    return products_url
+
+
+

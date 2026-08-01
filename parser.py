@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 headers = {
 
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -41,19 +43,59 @@ def parsing_catalog(url):
 
     return subcategories
 
-def parsing_subcategories(subcategories_urls):
+def parsing_subcategory(subcategory_url):
     session = make_session()
     products_url = []
-    for subcategory_url in subcategories_urls:
-        response = session.get(subcategory_url, timeout=(3.05, 27))
-        subcategory_soup = BeautifulSoup(response.text, 'lxml')
 
-        products_url_soup = subcategory_soup.select("a.title")
-        for product in products_url_soup:
+    for page in range(1, 94):
+
+        url = f"{subcategory_url}?page={page}"
+
+        response = session.get(
+            url,
+            timeout=(3.05, 27)
+        )
+
+        soup = BeautifulSoup(
+            response.text,
+            'lxml'
+        )
+
+        products = soup.select("a.title")
+
+        if not products:
+            break
+
+        for product in products:
             product_url = product.get('href')
-            products_url.append(product_url)
+
+            if product_url:
+                products_url.append(product_url)
 
     return products_url
 
+def parsing_subcategories(subcategories_urls):
+    products_url = []
 
+    with ThreadPoolExecutor(max_workers=20) as executor:
 
+        futures = [
+            executor.submit(
+                parsing_subcategory,
+                subcategory_url
+            )
+            for subcategory_url in subcategories_urls
+        ]
+
+        for future in as_completed(futures):
+
+            result = future.result()
+
+            products_url.extend(result)
+
+            print(
+                f"Получено URL: {len(result)} | "
+                f"Всего: {len(products_url)}"
+            )
+
+    return list(dict.fromkeys(products_url))

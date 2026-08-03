@@ -99,3 +99,24 @@ def parsing_subcategories(subcategories_urls):
             )
 
     return list(dict.fromkeys(products_url))
+
+# def parsing_product(products_url):
+    # session = make_session()
+    # for product_url in products_url:
+    #     response = session.get(product_url, timeout=(3.05, 27))
+    #     soup = BeautifulSoup(response.text, 'lxml')
+    #
+    #     # name
+    #     name_tag = soup.find('h1')
+    #     name = name_tag.text.strip() if name_tag else None
+    #
+    #     # price
+    #     price_tag = soup.select_one('div.product-page__price.price')
+    #     price = price_tag.text.strip() if price_tag else 'Можно запросить цену'
+    #
+    #     print(F'Наименование товара: {name}\nЦена: {price}')
+    #     print()
+    #     print()
+
+
+

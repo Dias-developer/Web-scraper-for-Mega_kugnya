@@ -4,6 +4,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 headers = {
 
@@ -12,6 +13,15 @@ headers = {
     "Chrome/120.0 Safari/537.36",
 "Accept-Language": "ru-RU,ru;q=0.9",
 }
+thread_local = threading.local()
+
+def get_session():
+    if not hasattr(thread_local, "session"):
+        thread_local.session = make_session()
+
+    return thread_local.session
+
+
 
 def make_session():
     session = requests.Session()
@@ -100,23 +110,49 @@ def parsing_subcategories(subcategories_urls):
 
     return list(dict.fromkeys(products_url))
 
-# def parsing_product(products_url):
-    # session = make_session()
-    # for product_url in products_url:
-    #     response = session.get(product_url, timeout=(3.05, 27))
-    #     soup = BeautifulSoup(response.text, 'lxml')
-    #
-    #     # name
-    #     name_tag = soup.find('h1')
-    #     name = name_tag.text.strip() if name_tag else None
-    #
-    #     # price
-    #     price_tag = soup.select_one('div.product-page__price.price')
-    #     price = price_tag.text.strip() if price_tag else 'Можно запросить цену'
-    #
-    #     print(F'Наименование товара: {name}\nЦена: {price}')
-    #     print()
-    #     print()
+def parse_product(url):
+    session = get_session()
+
+    response = session.get(url, timeout=(3.05, 27))
+    soup = BeautifulSoup(response.text, 'lxml')
+
+    # name
+    name_tag = soup.find('h1')
+    name = name_tag.text.strip() if name_tag else None
+
+    # price
+    price_tag = soup.select_one('div.product-page__price.price')
+    price = price_tag.text.strip() if price_tag else 'Можно запросить цену'
+
+    return {
+        'url': url,
+        'name': name,
+        'price': price
+    }
+
+def parse_products(urls):
+    products = []
+    with ThreadPoolExecutor(max_workers=20) as executor:
+
+        futures = [
+            executor.submit(
+                parse_product,
+                url
+            )
+            for url in urls
+        ]
+
+        for i, future in enumerate(as_completed(futures), 1):
+            try:
+                result = future.result()
+                products.append(result)
+            except Exception as e:
+                print(f'Ошибка: {e}')
+
+            if i % 100 == 0:
+                print(f'Обработано: {i}/{len(urls)}')
+    return products
+
 
 
 
